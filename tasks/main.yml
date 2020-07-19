@@ -1,0 +1,111 @@
+---
+- name: Ensure local temp directory exist
+  vars:
+    ansible_become: False
+  file:
+    name: "{{ fcos_virt_tmp_dir }}"
+    state: directory
+  run_once: True
+  delegate_to: localhost
+
+- name: Ensure that transpiled Fedora CoreOS configuration file exist
+  vars:
+    ansible_become: False
+    ec_changed: 125
+  shell: |
+    if [ ! -e "{{ fcos_virt_fcc_path }}" ]; then
+      echo "File not found: {{ fcos_virt_fcc_path }}"
+      exit {{ ec_changed - 1 }}
+    fi
+    if [ "{{ fcos_virt_fcc_path }}" -nt "{{ fcos_virt_ign_src_path }}" ]; then
+      podman run -i --rm {{ fcos_virt_fcct_image }} \
+          --pretty --strict > "{{ fcos_virt_ign_src_path }}"
+      ec=$?
+      if [ ${ec} -ne 0 ]; then
+        rm "{{ fcos_virt_ign_src_path }}"
+        exit ${ec}
+      fi
+      exit {{ ec_changed }}
+    fi
+  args:
+    stdin: "{{ lookup('template', fcos_virt_fcc_path) }}"
+  register: transpile_fcc
+  changed_when: transpile_fcc.rc == ec_changed
+  failed_when: transpile_fcc.rc not in [0, ec_changed]
+  delegate_to: localhost
+
+- name: Ensure that ignition directory exist on VM host
+  file:
+    path: "{{ fcos_virt_ign_dest_path | dirname }}"
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+  run_once: True
+  delegate_to: "{{ fcos_virt_vm_host }}"
+
+- name: Ensure that ignition file exist on VM host
+  copy:
+    src: "{{ fcos_virt_ign_src_path }}"
+    dest: "{{ fcos_virt_ign_dest_path }}"
+    owner: root
+    group: kvm
+    mode: 0644
+  delegate_to: "{{ fcos_virt_vm_host }}"
+
+- name: Ensure that the disk image is created on the VM host
+  command: qemu-img create -f qcow2 {{ fcos_virt_vm_disk_image_file }} 10G
+  args:
+    creates: "{{ fcos_virt_vm_disk_image_file }}"
+  delegate_to: "{{ fcos_virt_vm_host }}"
+
+- name: Ensure that the FCOS VM is defined
+  virt:
+    xml: "{{ lookup('template', fcos_virt_vm_xml_src) }}"
+    autostart: True
+    command: define
+  delegate_to: "{{ fcos_virt_vm_host }}"
+  register: ensure_vm_defined
+
+- name: Ensure that the FCOS VM is running
+  virt:
+    name: "{{ inventory_hostname }}"
+    state: running
+  delegate_to: "{{ fcos_virt_vm_host }}"
+  register: ensure_vm_running
+
+- name: Update local known_hosts file
+  include_tasks: update-known_hosts.yml
+  when: fcos_virt_update_known_hosts and ensure_vm_defined is changed
+
+- name: Ensure that target host is reachable
+  raw: /bin/true
+  changed_when: False
+  register: check_connection
+  until: check_connection.rc == 0
+  retries: 12
+  when: ensure_vm_running is changed
+
+- name: Ensure that Python is installed on the FCOS VM
+  vars:
+    ec_changed: 125
+    space: ' '
+  raw: |
+    if ! rpm --quiet -q {{ fcos_virt_required_packages | join(space) }}; then \
+      rpm-ostree install {{ fcos_virt_required_packages | join(space) }} && \
+      exit {{ ec_changed }}
+    fi
+  register: install_python
+  changed_when: install_python.rc == ec_changed
+  failed_when: install_python.rc not in [0, ec_changed]
+
+- name: Reboot if python installation was performed
+  raw: nohup /bin/sh -c 'sleep 2; reboot' >/dev/null & sleep 1
+  when: install_python is changed
+
+- name: Wait for host to become reachable
+  wait_for_connection:
+    delay: 5
+    connect_timeout: 2
+    timeout: 60
+  when: install_python is changed

@@ -1,0 +1,95 @@
+---
+# Choose if the local known_hosts file should be updated with the name of the
+# remote host efter installation
+fcos_virt_update_known_hosts: True
+
+# Directory used for temporary files
+fcos_virt_tmp_dir: "{{ playbook_dir }}/tmp"
+
+# The hostname or IP address of the host running libvirt
+fcos_virt_vm_host: "localhost"
+
+# The Fedora major release version
+fcos_virt_vm_fedora_version: 32
+
+# The amount of memory, in GiB, to assign to the VM
+fcos_virt_vm_memory_gib: 2
+
+# The number of VCPUs to assign to the VM
+fcos_virt_vm_vcpu: 2
+
+# The path to the directory holding disk images on the VM host
+fcos_virt_vm_disk_image_dir: "/var/lib/libvirt/images"
+
+# The path to the rw disk image for the VM
+fcos_virt_vm_disk_image_file: "{{ fcos_virt_vm_disk_image_dir }}/{{ inventory_hostname }}-rw.qcow2"
+
+# The path to the backing (base) disk image for the VM
+fcos_virt_vm_disk_backing_image_file: "{{ fcos_virt_vm_disk_image_dir }}/fedora-coreos-{{ fcos_virt_vm_fedora_version }}.qcow2"
+
+# The path to the template used to generate the libvirt domain XML file
+fcos_virt_vm_xml_src: "{{ role_path }}/templates/fcos.xml.j2"
+
+# The name of the bridge interface to use for networking
+fcos_virt_vm_bridge_name: "br0"
+
+# The name om the network interface inside of the VM
+# NOTE: This configuration variable will not set the name of the network
+#       interface so it must match the name that the VM will actually use.
+fcos_virt_vm_nic_name: "enp1s0"
+
+# The IPv4 address of the network interface
+fcos_virt_vm_ip4: "192.168.1.42/24"
+
+# The IPv4 default gateway to use
+fcos_virt_vm_gw4: "192.168.1.254"
+
+# List of DNS server(s) to use
+fcos_virt_vm_dns:
+  - 192.168.1.254
+
+# List of DNS domain(s) to search if lookup is not for an FQDN
+#fcos_virt_vm_dns_search:
+#  - "example.org"
+
+# List of required packages to install in the FCOS VM
+fcos_virt_required_packages:
+  - python3
+  - python3-libselinux
+
+# The container image to use for transpiling fcc -> ign
+fcos_virt_fcct_image: "quay.io/coreos/fcct:release"
+
+# The path to the Fedora CoreOS Configuration file template
+fcos_virt_fcc_path: "{{ role_path }}/templates/fcos.fcc.j2"
+
+# The source (local) path to the Fedora CoreOS ignition file
+fcos_virt_ign_src_path: "{{ fcos_virt_tmp_dir }}/{{ inventory_hostname }}.ign"
+
+# The destination (remote) path for the Fedora CoreOS ignition file
+fcos_virt_ign_dest_path: "/etc/libvirt/ignition/{{ inventory_hostname }}.ign"
+
+# The SSH public keys for the users that are allowes to log in to the 'core'
+# user account
+#fcos_virt_ssh_authorized_keys:
+#  - ssh-rsa AAAAB3Nza... user1@example.org
+
+# Update strategy for Fedora CoreOS
+fcos_virt_updates_strategy: |
+  [updates]
+  strategy = "periodic"
+
+  [[updates.periodic.window]]
+  days = [ "Sat" ]
+  start_time = "02:30"
+  length_minutes = 180
+
+# Choose if the Docker service should be masked, which will disable it
+fcos_virt_mask_docker_service: True
+
+# Choose if the iptables firewall service should be enabled or not
+fcos_virt_use_iptables: True
+
+# The password to set for the 'core' user account
+#fcos_virt_user_core_password: !unsafe 'bad!Password'
+

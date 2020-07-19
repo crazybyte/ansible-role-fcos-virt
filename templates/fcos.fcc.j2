@@ -1,0 +1,75 @@
+---
+###############################################################################
+#
+# Fedora CoreOS Configuration File
+#
+# This file will be transpiled to a JSON-format called an ignintion file. That
+# file is injected into a newly installed FCOS instance to do basic setup.
+#
+###############################################################################
+
+variant: fcos
+version: 1.0.0
+
+# Set up user accounts
+passwd:
+  users:
+    - name: core
+      {% if fcos_virt_user_core_password is defined %}password_hash: '{{ fcos_virt_user_core_password | password_hash('sha512') }}'{% endif -%}
+      ssh_authorized_keys: {{ fcos_virt_ssh_authorized_keys | d('[]') }}
+
+# Customize files and directories
+storage:
+  files:
+    # Set hostname
+    - path: '/etc/hostname'
+      mode: 0644
+      contents:
+        inline: '{{ inventory_hostname }}'
+
+    # Set up static IP
+    - path: "/etc/NetworkManager/system-connections/{{ fcos_virt_vm_nic_name }}.nmconnection"
+      mode: 0600
+      overwrite: true
+      contents:
+        inline: |
+          [connection]
+          type=ethernet
+          interface-name={{ fcos_virt_vm_nic_name }}
+          autoconnect=true
+
+          [ipv4]
+          method=manual
+          addresses={{ fcos_virt_vm_ip4 }}
+          {% if fcos_virt_vm_gw4 is defined -%}
+          gateway={{ fcos_virt_vm_gw4 }}
+          {% endif -%}
+          {% if fcos_virt_vm_dns is defined -%}
+          dns={{ fcos_virt_vm_dns | join(';') }}
+          {% endif -%}
+          {% if fcos_virt_vm_dns_search is defined -%}
+          dns-search={{ fcos_virt_vm_dns_search | join(',') }}
+          {% endif %}
+
+{% if fcos_virt_updates_strategy is defined %}
+    # Use scheduled automatic OS updates with reboot
+    - path: /etc/zincati/config.d/55-updates-strategy.toml
+      mode: 0644
+      contents:
+        inline: |
+          {{ fcos_virt_updates_strategy | indent(10) }}
+
+{% endif -%}
+
+# Set up systemd units
+systemd:
+  units:
+    # Disable docker so it does not get started by mistake
+    - name: docker.service
+      mask: {{ fcos_virt_mask_docker_service | bool | ternary('true', 'false') }}
+
+    # Enable the iptables firewall
+    - name: iptables.service
+      enabled: {{ fcos_virt_use_iptables | bool | ternary('true', 'false') }}
+
+# vim: set filetype=yaml:

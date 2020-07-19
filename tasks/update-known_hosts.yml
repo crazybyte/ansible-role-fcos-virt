@@ -1,0 +1,52 @@
+---
+- name: Get SSH config for target host
+  vars:
+    ansible_become: False
+  command: ssh -G {{ (ansible_ssh_host|d(ansible_host))|d(inventory_hostname) }}
+  changed_when: False
+  register: ssh_config
+  connection: local
+
+- name: Extract target IP from SSH config
+  set_fact:
+    target_ip: "{{ (ssh_config.stdout_lines | select('match', '^hostname ') | list)[0].split()[1] | to_ip }}"
+
+- name: Remove target IP from known_hosts
+  vars:
+    ansible_become: False
+  known_hosts:
+    name: "{{ target_ip }}"
+    path: "~/.ssh/known_hosts"
+    state: absent
+  delegate_to: localhost
+
+- name: Wait for the host to become reachable
+  vars:
+    ansible_become: False
+  wait_for:
+    port: 22
+    host: "{{ (ansible_ssh_host|d(ansible_host))|d(inventory_hostname) }}"
+    search_regex: OpenSSH
+    timeout: 600
+  connection: local
+
+- name: Get SSH host keys for FCOS VM
+  vars:
+    ansible_become: False
+  command: >
+    ssh-keyscan -p {{ ansible_ssh_port | d(22) }}
+        {{ (ansible_ssh_host | d(ansible_host)) | d(inventory_hostname) }}
+  changed_when: False
+  register: ssh_keyscan
+  connection: local
+
+- name: Add FCOS VM SSH host keys to the local known_hosts file
+  vars:
+    ansible_become: False
+  known_hosts:
+    key: "{{ item }}"
+    name: "{{ item.split()[0] }}"
+    path: "~/.ssh/known_hosts"
+    state: present
+  loop: "{{ ssh_keyscan.stdout_lines | d([]) }}"
+  delegate_to: localhost

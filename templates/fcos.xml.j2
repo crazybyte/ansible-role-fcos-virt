@@ -1,0 +1,50 @@
+<!--
+WARNING: THIS FILE IS HANDLED BY ANSIBLE. CHANGES TO IT ARE LIKELY TO BE
+OVERWRITTEN AND LOST.
+-->
+
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>{{ inventory_hostname }}</name>
+  <metadata>
+    <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+      <libosinfo:os id="http://fedoraproject.org/fedora/{{ fcos_virt_vm_fedora_version }}"/>
+    </libosinfo:libosinfo>
+  </metadata>
+  <memory unit='GiB'>{{ fcos_virt_vm_memory_gib }}</memory>
+  <currentMemory unit='GiB'>{{ fcos_virt_vm_memory_gib }}</currentMemory>
+  <vcpu placement='static'>{{ fcos_virt_vm_vcpu }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-5.0'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ fcos_virt_vm_disk_image_file }}'/>
+      <backingStore type='file'>
+        <format type='qcow2'/>
+        <source file='{{ fcos_virt_vm_disk_backing_image_file }}'/>
+      </backingStore>
+      <backingStore/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <interface type='bridge'>
+      <source bridge='{{ fcos_virt_vm_bridge_name }}'/>
+      <model type='virtio'/>
+    </interface>
+    <console type='pty'>
+      <target type='serial'/>
+    </console>
+  </devices>
+  <qemu:commandline>
+    <qemu:arg value='-fw_cfg'/>
+    <qemu:arg value='name=opt/com.coreos/config,file={{ fcos_virt_ign_dest_path }}'/>
+  </qemu:commandline>
+</domain>
+
+<!-- vim: set filetype=xml: -->
