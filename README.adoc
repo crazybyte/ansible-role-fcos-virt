@@ -1,5 +1,12 @@
 = Ansible Role for installing Fedora CoreOS on libvirt
 :source-highlighter: coderay
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
 
 This is an Ansible role which is used to install Fedora CoreOS as a virtual
 machine on a libvirt virtualisation host.
@@ -7,8 +14,10 @@ machine on a libvirt virtualisation host.
 == Configuration
 There are a number of configuration variables that can be used to customize
 this role. All variables can be found in
-link:defaults/main.yml[defaults/main.yml] and are also listed at the bottom of
-this file for easy access.
+link:defaults/main.yml[defaults/main.yml].
+ifndef::env-github[]
+They are also listed at the bottom of this document for easy access.
+endif::[]
 
 You will probably have to change at least the variables below.
 
@@ -88,6 +97,7 @@ hello to stdout.
         state: started
 ----
 
+ifndef::env-github[]
 == All configuration variables
 These are all available configuration variables.
 
@@ -95,4 +105,4 @@ These are all available configuration variables.
 ----
 include::defaults/main.yml[]
 ----
-
+endif::[]
