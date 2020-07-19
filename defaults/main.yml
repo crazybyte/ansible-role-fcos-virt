@@ -1,6 +1,6 @@
 ---
 # Choose if the local known_hosts file should be updated with the name of the
-# remote host efter installation
+# remote host after installation
 fcos_virt_update_known_hosts: True
 
 # Directory used for temporary files
@@ -21,7 +21,7 @@ fcos_virt_vm_vcpu: 2
 # The path to the directory holding disk images on the VM host
 fcos_virt_vm_disk_image_dir: "/var/lib/libvirt/images"
 
-# The path to the rw disk image for the VM
+# The path to the read-write disk image for the VM
 fcos_virt_vm_disk_image_file: "{{ fcos_virt_vm_disk_image_dir }}/{{ inventory_hostname }}-rw.qcow2"
 
 # The path to the backing (base) disk image for the VM
@@ -38,13 +38,13 @@ fcos_virt_vm_bridge_name: "br0"
 #       interface so it must match the name that the VM will actually use.
 fcos_virt_vm_nic_name: "enp1s0"
 
-# The IPv4 address of the network interface
+# The IPv4 address of the VM network interface
 fcos_virt_vm_ip4: "192.168.1.42/24"
 
-# The IPv4 default gateway to use
+# The IPv4 default gateway to use in the VM
 fcos_virt_vm_gw4: "192.168.1.254"
 
-# List of DNS server(s) to use
+# List of DNS server(s) to use in the VM
 fcos_virt_vm_dns:
   - 192.168.1.254
 
@@ -69,7 +69,7 @@ fcos_virt_ign_src_path: "{{ fcos_virt_tmp_dir }}/{{ inventory_hostname }}.ign"
 # The destination (remote) path for the Fedora CoreOS ignition file
 fcos_virt_ign_dest_path: "/etc/libvirt/ignition/{{ inventory_hostname }}.ign"
 
-# The SSH public keys for the users that are allowes to log in to the 'core'
+# The SSH public keys for the users that are allowed to log in to the 'core'
 # user account
 #fcos_virt_ssh_authorized_keys:
 #  - ssh-rsa AAAAB3Nza... user1@example.org

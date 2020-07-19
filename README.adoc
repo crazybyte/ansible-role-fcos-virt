@@ -1,0 +1,98 @@
+= Ansible Role for installing Fedora CoreOS on libvirt
+:source-highlighter: coderay
+
+This is an Ansible role which is used to install Fedora CoreOS as a virtual
+machine on a libvirt virtualisation host.
+
+== Configuration
+There are a number of configuration variables that can be used to customize
+this role. All variables can be found in
+link:defaults/main.yml[defaults/main.yml] and are also listed at the bottom of
+this file for easy access.
+
+You will probably have to change at least the variables below.
+
+[source,yaml]
+.Configuration Example
+----
+# The hostname or IP address of the host running libvirt
+fcos_virt_vm_host: "my_virtualisation_host.example.org"
+
+# The name of the bridge interface on the VM host to use for networking
+fcos_virt_vm_bridge_name: "dmz"
+
+# The IPv4 address of the network interface
+fcos_virt_vm_ip4: "192.168.1.55/24"
+
+# The IPv4 default gateway to use
+fcos_virt_vm_gw4: "192.168.1.254"
+
+# List of DNS server(s) to use
+fcos_virt_vm_dns:
+  - 192.168.0.254
+
+# The SSH public keys for the users that are allowed to log in to the 'core'
+# user account
+fcos_virt_ssh_authorized_keys:
+  - ssh-rsa AAAA_YOUR_COMPLETE_SSH_PUBLIC_KEY_GOES_HERE user1@example.org
+----
+
+
+== Example playbook
+This is an example playbook for using this role. In addition to installing FCOS
+this example playbook will also install a ''hello'' service that just print
+hello to stdout.
+
+[source,yaml]
+----
+---
+- name: Install Fedora Core OS on libvirt
+  hosts: fcos
+  gather_facts: False
+  vars:
+    ansible_become: True
+  roles:
+    - fcos-virt
+
+- name: Install services on Fedora CoreOS
+  hosts: fcos
+  vars:
+    ansible_become: True
+  tasks:
+    - name: Install test service
+      copy:
+        dest: /etc/systemd/system/hello.service
+        owner: root
+        group: root
+        mode: 0644
+        content: |
+          [Unit]
+          Description=MyApp
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          TimeoutStartSec=0
+          ExecStartPre=-/bin/podman kill busybox1
+          ExecStartPre=-/bin/podman rm busybox1
+          ExecStartPre=/bin/podman pull busybox
+          ExecStart=/bin/podman run --name busybox1 busybox /bin/sh -c "trap 'exit 0' INT TERM; while true; do echo Hello World; sleep 1; done"
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start test service
+      service:
+        name: hello.service
+        enabled: True
+        state: started
+----
+
+== All configuration variables
+These are all available configuration variables.
+
+[source,yaml]
+----
+include::defaults/main.yml[]
+----
+
